@@ -1,0 +1,815 @@
+---
+layout:     post
+title:      "Assignment 4"
+subtitle:   "Working with APIs"
+date:       2017-02-16 12:00:00
+author:     "Cindy Lai"
+header-img: "img/cat.jpg"
+---
+
+# Assignment 4
+
+In this assignment, you'll combine the assignment 3 data set with nutrition data from the [USDA Food Composition Databases](https://ndb.nal.usda.gov/ndb/search/list). The CSV file `fresh.csv` contains the fresh fruits and vegetables data you extracted in assignment 3.
+
+The USDA Food Composition Databases have a [documented](https://ndb.nal.usda.gov/ndb/doc/index) web API that returns data in JSON format . You need a key in order to use the API. Only 1000 requests are allowed per hour, so it would be a good idea to use [caching][requests_cache].
+
+[Sign up for an API key here](https://api.data.gov/signup/). The key will work with any Data.gov API. You may need the key again later in the quarter, so make sure you save it.
+
+These modules may be useful:
+
+* [requests](http://docs.python-requests.org/en/master/user/quickstart/)
+* [requests_cache][]
+* [urlparse](https://docs.python.org/2/library/urlparse.html)
+* [pandas](http://pandas.pydata.org/pandas-docs/stable/)
+
+[requests_cache]: https://pypi.python.org/pypi/requests-cache
+
+Sites used: 
+* http://stackoverflow.com/questions/5188792/how-to-check-a-string-for-specific-characters
+* http://www.pythonforbeginners.com/dictionary/python-split
+* http://stackoverflow.com/questions/5438745/python-nan-and-inf-values
+* http://stackoverflow.com/questions/8312829/how-to-remove-item-from-a-python-list-if-a-condition-is-true
+* http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.sort_index.html
+* http://stackoverflow.com/questions/30009948/how-to-reorder-indexed-rows-based-on-a-list-in-pandas-data-frame
+* http://stackoverflow.com/questions/5147112/matplotlib-how-to-put-individual-tags-for-a-scatter-plot
+
+__Exercise 1.1.__ Read the [search request documentation](https://ndb.nal.usda.gov/ndb/doc/apilist/API-SEARCH.md), then write a function called `ndb_search()` that makes a search request. The function should accept the search term as an argument. The function should return the search result items as a list (for 0 items, return an empty list).
+
+Note that the search url is: `https://api.nal.usda.gov/ndb/search`
+
+As an example, a search for `"quail eggs"` should return this list:
+
+```python
+[{u'ds': u'BL',
+  u'group': u'Branded Food Products Database',
+  u'name': u'CHAOKOH, QUAIL EGG IN BRINE, UPC: 044738074186',
+  u'ndbno': u'45094707',
+  u'offset': 0},
+ {u'ds': u'BL',
+  u'group': u'Branded Food Products Database',
+  u'name': u'L&W, QUAIL EGGS, UPC: 024072000256',
+  u'ndbno': u'45094890',
+  u'offset': 1},
+ {u'ds': u'BL',
+  u'group': u'Branded Food Products Database',
+  u'name': u'BUDDHA, QUAIL EGGS IN BRINE, UPC: 761934535098',
+  u'ndbno': u'45099560',
+  u'offset': 2},
+ {u'ds': u'BL',
+  u'group': u'Branded Food Products Database',
+  u'name': u'GRAN SABANA, QUAIL EGGS, UPC: 819140010103',
+  u'ndbno': u'45169279',
+  u'offset': 3},
+ {u'ds': u'BL',
+  u'group': u'Branded Food Products Database',
+  u'name': u"D'ARTAGNAN, QUAIL EGGS, UPC: 736622102630",
+  u'ndbno': u'45178254',
+  u'offset': 4},
+ {u'ds': u'SR',
+  u'group': u'Dairy and Egg Products',
+  u'name': u'Egg, quail, whole, fresh, raw',
+  u'ndbno': u'01140',
+  u'offset': 5}]
+```
+
+As usual, make sure you document and test your function.
+
+
+```python
+from urllib2 import Request, urlopen
+from urlparse import urlparse, urlunparse
+import requests, requests_cache
+import pandas as pd
+import json
+
+
+# my API key
+key = "ULxnv6kWU0vTif6L3wHrB5MIkQKj0PrM3IfgfWbG"
+```
+
+
+```python
+requests_cache.install_cache('food_cache')
+```
+
+
+    ---------------------------------------------------------------------------
+
+    NameError                                 Traceback (most recent call last)
+
+    <ipython-input-10-1e21dcdbe5e7> in <module>()
+    ----> 1 requests_cache.install_cache('food_cache')
+    
+
+    NameError: name 'requests_cache' is not defined
+
+
+
+```python
+# generate the query request to search for results
+
+# Notes: The request will return a JSON object. Default sort = "r", aka relevance
+# EXAMPLE URL: https://api.nal.usda.gov/ndb/search/?api_key=ULxnv6kWU0vTif6L3wHrB5MIkQKj0PrM3IfgfWbG&format=json&q=mushroom
+
+maxResults = 5
+
+def get_request(key, searchObject):
+    urlbase = "https://api.nal.usda.gov/ndb/search/"
+    params = {"q":searchObject}
+    params.update({"format":"json"})
+    params.update({"api_key":key})
+    params.update({"max":maxResults})
+    return requests.get(urlbase,params=params)
+get_request(key, "mushroom")
+```
+
+
+
+
+    <Response [200]>
+
+
+
+
+```python
+def ndb_search(searchObject):
+    searchList = []
+    request = get_request(key, searchObject)
+    searchList = request.json()
+    return searchList[u'list'][u'item']
+
+ndb_search("mushroom")
+```
+
+
+
+
+    [{u'ds': u'BL',
+      u'group': u'Branded Food Products Database',
+      u'name': u'MUSHROOM GRAVY MADE WITH REAL MUSHROOMS, UPC: 011213168265',
+      u'ndbno': u'45077161',
+      u'offset': 0},
+     {u'ds': u'BL',
+      u'group': u'Branded Food Products Database',
+      u'name': u'BARTOLINI, EXTRA VIRGIN OLIVE OIL WITH MUSHROOM OIL, PORCINI MUSHROOM OIL, UPC: 657739001541',
+      u'ndbno': u'45168655',
+      u'offset': 1},
+     {u'ds': u'BL',
+      u'group': u'Branded Food Products Database',
+      u'name': u'MUSHROOM HOUSE, DRIED OYSTER MUSHROOMS, UPC: 084348369166',
+      u'ndbno': u'45184863',
+      u'offset': 2},
+     {u'ds': u'BL',
+      u'group': u'Branded Food Products Database',
+      u'name': u'MUSHROOM HOUSE, SHIITAKE DRIED MUSHROOMS, UPC: 084348374160',
+      u'ndbno': u'45184864',
+      u'offset': 3},
+     {u'ds': u'BL',
+      u'group': u'Branded Food Products Database',
+      u'name': u'MUSHROOM HOUSE, DRIED MUSHROOMS, UPC: 084348396162',
+      u'ndbno': u'45184865',
+      u'offset': 4}]
+
+
+
+__Exercise 1.2.__ Use your search function to get NDB numbers for the foods in the `fresh.csv` file. It's okay if you don't get an NDB number for every food, but try to come up with a strategy that gets most of them. Discuss your strategy in a short paragraph.
+
+Hints:
+
+* The foods are all raw and unbranded.
+* You can test search terms with the [online search page](https://ndb.nal.usda.gov/ndb/search/list).
+* You can convert the output of `ndb_search()` to a data frame with `pd.DataFrame()`.
+* The string methods for [Python](https://docs.python.org/2/library/stdtypes.html#string-methods) and [Pandas](http://pandas.pydata.org/pandas-docs/stable/text.html#method-summary) are useful here. It's okay if you use _simple_ regular expressions in the Pandas methods, although this exercise can be solved without them.
+* You can merge data frames that have a column in common with `pd.merge()`.
+
+Note: I use both <b>raw_fresh</b> and <b>fresh</b> throughout the code. This was because I later updated the rows of fresh to sort by food name alphabetically, so it messed up the ordering. I use raw_fresh for the old index order.
+
+
+```python
+raw_fresh = pd.read_csv("fresh.csv")
+fresh = raw_fresh.sort_values(by = "food")
+fresh.head()
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>form</th>
+      <th>price_per_lb</th>
+      <th>yield</th>
+      <th>lb_per_cup</th>
+      <th>price_per_cup</th>
+      <th>food</th>
+      <th>type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>34</th>
+      <td>Fresh1</td>
+      <td>1.172248</td>
+      <td>0.458554</td>
+      <td>0.451948</td>
+      <td>1.155360</td>
+      <td>acorn_squash</td>
+      <td>vegetables</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Fresh1</td>
+      <td>1.567515</td>
+      <td>0.900000</td>
+      <td>0.242508</td>
+      <td>0.422373</td>
+      <td>apples</td>
+      <td>fruit</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Fresh1</td>
+      <td>3.040072</td>
+      <td>0.930000</td>
+      <td>0.363763</td>
+      <td>1.189102</td>
+      <td>apricots</td>
+      <td>fruit</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Fresh1</td>
+      <td>2.213050</td>
+      <td>0.375309</td>
+      <td>0.385809</td>
+      <td>2.274967</td>
+      <td>artichoke</td>
+      <td>vegetables</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Fresh1</td>
+      <td>3.213494</td>
+      <td>0.493835</td>
+      <td>0.396832</td>
+      <td>2.582272</td>
+      <td>asparagus</td>
+      <td>vegetables</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+After searching on the online page, I noticed the majority have the word are formatted "[fruit/vegetable], raw", so I will adjust my search to include that in the parameter. Entries with more than one word are separted by a ", ".
+
+In order to find the fresh fruit or vegetable you are looking for, I am modifying the search term to make it appear on top. Modifications include:
+<ul>
+  <li>Adding '<b>, raw</b>' to the end of every entry</li>
+  <li>Splitting multi-word entries with a comma</li>
+  <li>Dealing with special cases</li>
+</ul>
+
+I wrote a function called <b>modify_search_term</b> which will deal with multi-word entries by splitting them up and adding "raw" at the end of each term.
+<b>check_if_found</b> makes sure that we get the item that we want. It goes to look into the food item's group to make sure it belongs to the "Vegetables and Vegetable Products" group or the "Fruits and Fruit Juices" group, and not some branded entry.
+
+<b>grab_correct_entry</b> builds off check_if_found and goes through the search result list and returns the first entry which check_if_found is equal to <b>True</b>.
+
+These functions culminate to <b>get_ndbno</b>, which takes an entry from the fresh.csv and outputs its corresponding nbd number.
+
+The output is generated in the for loop, which creates a dictionary of foods and their ndb number. The for loop passes whenever get_ndb does not output a favorable result.
+
+
+```python
+def modify_search_term(food):
+    searchTerm = food
+    if "_" in food: # two+ word i.e. "collard_greens"
+        searchTerm = ", ".join(food.split('_'))
+    return searchTerm + ", raw"
+
+modify_search_term("lettuce_iceberg")
+```
+
+
+
+
+    'lettuce, iceberg, raw'
+
+
+
+Write something to deal with when the group isn't <b>Vegetables and Vegetable Products</b> or <b>Fruits and Fruit Products</b>. Raise a flag to indicate that the raw fruit wasn't found.
+
+
+```python
+def check_if_found(foodJson):
+    foodGroup = foodJson[u'group']
+    if (foodGroup == u'Vegetables and Vegetable Products') or (foodGroup == u'Fruits and Fruit Juices'):
+        return True
+    else:
+        return False
+```
+
+
+```python
+def grab_correct_entry(jsonList):
+    for result in jsonList:
+        if check_if_found(result):
+            return result
+    return None
+```
+
+
+```python
+# main function to get ndb number
+
+def get_ndbno(entry):
+    searchTerm = modify_search_term(entry)
+    searchResults = ndb_search(searchTerm)  
+    
+    foodEntry = grab_correct_entry(searchResults)
+    if foodEntry is None:
+        return float('NaN')
+    return foodEntry['ndbno']
+    
+lettuce = get_ndbno("lettuce_iceberg")
+```
+
+
+```python
+get_ndbno('watermelon')
+```
+
+
+
+
+    u'09326'
+
+
+
+
+```python
+# write a function to handle duplicates (cabbage and cucumbers)
+# input: takes the index for the row the food is located in raw_fresh
+# outputs new search term
+def look_for_details(ind):
+    freshForm = raw_fresh.loc[ind][0]
+    detail = freshForm.split(" ")[1:][0]
+    #return detail
+    if detail[len(detail) - 1] == "1":
+        detail = detail[:(len(detail) - 1)]
+        
+    return fresh.loc[ind]['food'] + ", " + detail
+    
+look_for_details(26)
+```
+
+
+
+
+    'cucumbers, peeled'
+
+
+
+This function does not grab as many terms if I were to make it more specific. However, I kept it more general in case the data gets larger, so the look_for_details function would be able to grab more instances.
+
+This goes through all of the food in the fresh csv. It tries to get all the ndb numbers by using the function get_ndbno(). If a duplicate is found, it will use the function look_for_details() and modify the term that you will be searching for (cabbage -> red cabbage). Assumes that the first instance of duplicate pair will be original (uses cabbage) and 2nd will be a variation (red cabbage).
+
+
+```python
+ndbNumbers = {}
+badRows = []
+for idx, food in enumerate(raw_fresh['food']):
+    if food in ndbNumbers.keys(): # duplicate
+        food = look_for_details(idx)
+    try:
+        ndbNumbers[food] = get_ndbno(food)
+    except:
+        badRows.append(idx)
+        pass
+```
+
+
+```python
+ndbNumbers # didn't get kiwi, and cucumbers is wrong (not the consumed with peel)
+```
+
+
+
+
+    {'acorn_squash': u'11482',
+     'apples': u'09003',
+     'apricots': u'09021',
+     'artichoke': u'11226',
+     'asparagus': u'11011',
+     'avocados': u'09038',
+     'bananas': u'09040',
+     'blackberries': u'09042',
+     'blueberries': u'09050',
+     'brussels_sprouts': u'11098',
+     'butternut_squash': u'11485',
+     'cabbage': u'11503',
+     'cabbage, red': u'11112',
+     'cantaloupe': u'09181',
+     'cherries': u'09276',
+     'collard_greens': u'11161',
+     'corn_sweet': u'11900',
+     'cucumbers': u'11206',
+     'cucumbers, peeled': u'11206',
+     'grapefruit': u'09117',
+     'grapes': u'09129',
+     'green_beans': u'11052',
+     'green_peppers': u'11333',
+     'honeydew': u'09184',
+     'kale': u'11233',
+     'lettuce_iceberg': u'11252',
+     'mangoes': u'09176',
+     'mustard_greens': u'11270',
+     'nectarines': u'09191',
+     'okra': u'11278',
+     'onions': u'11282',
+     'oranges': u'09201',
+     'papaya': u'09226',
+     'peaches': u'09236',
+     'pears': u'09252',
+     'pineapple': u'09266',
+     'plums': u'09279',
+     'pomegranate': u'09286',
+     'potatoes': u'11362',
+     'radish': u'11429',
+     'raspberries': u'09302',
+     'red_peppers': u'11821',
+     'strawberries': u'09316',
+     'summer_squash': u'11475',
+     'sweet_potatoes': u'11507',
+     'tangerines': u'09221',
+     'turnip_greens': u'11568',
+     'watermelon': u'09326'}
+
+
+
+
+```python
+ndb_df = pd.DataFrame(ndbNumbers.values(), index = ndbNumbers.keys(), columns = ['ndbNo'])
+ndb_df.head()
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ndbNo</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>red_peppers</th>
+      <td>11821</td>
+    </tr>
+    <tr>
+      <th>bananas</th>
+      <td>09040</td>
+    </tr>
+    <tr>
+      <th>lettuce_iceberg</th>
+      <td>11252</td>
+    </tr>
+    <tr>
+      <th>radish</th>
+      <td>11429</td>
+    </tr>
+    <tr>
+      <th>corn_sweet</th>
+      <td>11900</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+ndb_df = ndb_df.sort_index()
+ndb_df.head()
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ndbNo</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>acorn_squash</th>
+      <td>11482</td>
+    </tr>
+    <tr>
+      <th>apples</th>
+      <td>09003</td>
+    </tr>
+    <tr>
+      <th>apricots</th>
+      <td>09021</td>
+    </tr>
+    <tr>
+      <th>artichoke</th>
+      <td>11226</td>
+    </tr>
+    <tr>
+      <th>asparagus</th>
+      <td>11011</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+__Exercise 1.3.__ Read the [food reports V2 documentation](https://ndb.nal.usda.gov/ndb/doc/apilist/API-FOOD-REPORTV2.md), then write a function called `ndb_report()` that requests a _basic_ food report. The function should accept the NDB number as an argument and return the list of nutrients for the food.
+
+Note that the report url is: `https://api.nal.usda.gov/ndb/V2/reports`
+
+For example, for `"09279"` (raw plums) the first element of the returned list should be:
+
+```python
+{u'group': u'Proximates',
+ u'measures': [{u'eqv': 165.0,
+   u'eunit': u'g',
+   u'label': u'cup, sliced',
+   u'qty': 1.0,
+   u'value': u'143.93'},
+  {u'eqv': 66.0,
+   u'eunit': u'g',
+   u'label': u'fruit (2-1/8" dia)',
+   u'qty': 1.0,
+   u'value': u'57.57'},
+  {u'eqv': 151.0,
+   u'eunit': u'g',
+   u'label': u'NLEA serving',
+   u'qty': 1.0,
+   u'value': u'131.72'}],
+ u'name': u'Water',
+ u'nutrient_id': u'255',
+ u'unit': u'g',
+ u'value': u'87.23'}
+```
+
+Be sure to document and test your function.
+
+
+```python
+def ndb_report(ndbNumber):
+    url = "https://api.nal.usda.gov/ndb/V2/reports/"
+    querystring = {"ndbno":ndbNumber,"api_key":"ULxnv6kWU0vTif6L3wHrB5MIkQKj0PrM3IfgfWbG","format":"json","type":"b"}
+    response = requests.get(url, params=querystring)
+    return response.json()[u'foods'][0]['food']['nutrients']
+```
+
+
+```python
+ndb_report(11112) # red cabbage
+```
+
+__Exercise 1.4.__ Which foods provide the best combination of price, yield, and nutrition? You can use kilocalories as a measure of "nutrition" here, but more a detailed analysis is better. Use plots to support your analysis.
+
+I based off what is "healthy" from Energy (kcal), Fiber, Sugars (negative health), and Vitamin C. I used the formula:
+<b>health = energy + fiber + vitaminC - sugars/2</b>
+
+
+```python
+prices = fresh['price_per_lb'].reindex(fresh.index)
+priceList = prices.tolist()
+good_prices = [priceList[i] for i in xrange(len(priceList)) if i not in badRows] 
+# note! this does enter the wrong price for cucumbers, with peel
+
+ndb_df['price per lb'] = good_prices
+```
+
+
+```python
+types = fresh['type'].reindex(fresh.index)
+typeList = types.tolist()
+good_types = [typeList[i] for i in xrange(len(typeList)) if i not in badRows] 
+
+ndb_df['type'] = good_types
+```
+
+
+```python
+ndb_df["Nutrients"] = [ndb_report(x) for x in ndb_df['ndbNo']]
+```
+
+
+```python
+nut_keys = [1, 6, 5, 14]
+            # energy, sugars, fiber, vitamin C
+
+
+# takes in a nutrition report and a nut_keys index, and returns the nutrient value
+def nutrient_info_extractor(food, idx):
+    return float(food[idx]['value'])
+
+ndb_df['energy'] = [nutrient_info_extractor(fd, nut_keys[0]) for fd in ndb_df["Nutrients"]]
+ndb_df['sugar'] = [nutrient_info_extractor(fd, nut_keys[1]) for fd in ndb_df["Nutrients"]]
+ndb_df['fiber'] = [nutrient_info_extractor(fd, nut_keys[2]) for fd in ndb_df["Nutrients"]]
+ndb_df['vitamin C'] = [nutrient_info_extractor(fd, nut_keys[3]) for fd in ndb_df["Nutrients"]]
+```
+
+<h4>Heath Index</h4>
+Now I calculate the "health index", which takes calories, fiber, vitamin C, and sugars into consideration. I chose these elements because these are some very common nutrients, known to the general public. People usually want fibers and high in vitamin C, and want to stay away from sugars (sugars is my penalty term).
+In addition, I consulted a couple of nutrition articles to see what they usually rate as a nutritional food. I wanted to keep the index simple, so I did not include many variables. <p>
+<i>Note:</i>I divided sugars by 2, so it won't have such a dramatic impact on the health index.
+
+
+```python
+ndb_df['health index'] = ndb_df['energy'] + ndb_df['fiber'] + ndb_df['vitamin C'] - ndb_df['sugar']/2.0
+```
+
+
+```python
+ndb_df.head()
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ndbNo</th>
+      <th>price per lb</th>
+      <th>Nutrients</th>
+      <th>energy</th>
+      <th>sugar</th>
+      <th>fiber</th>
+      <th>vitamin C</th>
+      <th>health index</th>
+      <th>type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>acorn_squash</th>
+      <td>11482</td>
+      <td>1.172248</td>
+      <td>[{u'group': u'Proximates', u'name': u'Water', ...</td>
+      <td>40.0</td>
+      <td>33.00</td>
+      <td>1.5</td>
+      <td>0.14</td>
+      <td>25.140</td>
+      <td>vegetables</td>
+    </tr>
+    <tr>
+      <th>apples</th>
+      <td>09003</td>
+      <td>1.567515</td>
+      <td>[{u'group': u'Proximates', u'name': u'Water', ...</td>
+      <td>52.0</td>
+      <td>10.39</td>
+      <td>2.4</td>
+      <td>4.60</td>
+      <td>53.805</td>
+      <td>fruit</td>
+    </tr>
+    <tr>
+      <th>apricots</th>
+      <td>09021</td>
+      <td>3.040072</td>
+      <td>[{u'group': u'Proximates', u'name': u'Water', ...</td>
+      <td>48.0</td>
+      <td>9.24</td>
+      <td>2.0</td>
+      <td>10.00</td>
+      <td>55.380</td>
+      <td>fruit</td>
+    </tr>
+    <tr>
+      <th>artichoke</th>
+      <td>11226</td>
+      <td>2.213050</td>
+      <td>[{u'group': u'Proximates', u'name': u'Water', ...</td>
+      <td>73.0</td>
+      <td>9.60</td>
+      <td>1.6</td>
+      <td>4.00</td>
+      <td>73.800</td>
+      <td>vegetables</td>
+    </tr>
+    <tr>
+      <th>asparagus</th>
+      <td>11011</td>
+      <td>3.213494</td>
+      <td>[{u'group': u'Proximates', u'name': u'Water', ...</td>
+      <td>20.0</td>
+      <td>1.88</td>
+      <td>2.1</td>
+      <td>5.60</td>
+      <td>26.760</td>
+      <td>vegetables</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+import seaborn as sns
+import matplotlib
+import matplotlib.pyplot as plt
+
+chart1 = sns.regplot(x='price per lb', y='health index', data=ndb_df, ci=None, fit_reg = False, scatter_kws={'s':30})
+
+sns.plt.title('Health Index (kcal, sugars, Vitamin C, fiber) vs. Price')
+
+for label, x, y in zip(ndb_df.index, ndb_df['price per lb'], ndb_df['health index']):
+    plt.annotate(
+        label,
+        xy=(x, y), ha='center', va='bottom',
+        bbox=dict(boxstyle='round,pad=0.1', fc='white', alpha=0.5))
+    
+plt.show()
+# plotting price vs. health index
+```
+
+
+![png](output_38_0.png)
+
+
+If we base value off of price and what is considered 'nutritious' (health index), then according to the plot above, we should look at the foods in the <b>top left</b> region. We can see
+* avocados
+* kale
+* red peppers
+* brussels spouts
+
+in the top rankings.
+Some other interesting foods to point out are <b>raspberries</b>, which stand out as a very expensive food with mediocre nutritional value. The berries in general are on the right, with mediocre health indices. <b>Green Cabbage</b> <i>(labled as cabbage in the graph)</i> is rather cheap, but surprisingly not that healthy (with a negative index).
+
+If you generally care more for price, you should look at the left side. <b>Green peppers</b>, <b>pineapples</b>, <b>sweet potatoes</b> are some cheap, high in nutrient foods.
+
+
+```python
+chart2 = sns.regplot(x='price per lb', y='energy', data=ndb_df, ci=None, fit_reg = False, scatter_kws={'s':30})
+sns.plt.title('Energy (kcal) vs. Price')
+
+for label, x, y in zip(ndb_df.index, ndb_df['price per lb'], ndb_df['energy']):
+    plt.annotate(
+        label,
+        xy=(x, y), ha='center', va='bottom',
+        bbox=dict(boxstyle='round,pad=0.1', fc='white', alpha=0.5))
+plt.show()
+```
+
+
+![png](output_40_0.png)
+
+
+When we take a simpler approach and simply base nutrition off of Energy (kcal), then you can see that <b>avocados</b> definitely takes the lead.
+
+
+```python
+chart3 = sns.FacetGrid(ndb_df, hue = "type", size = 3)
+chart3.map(plt.scatter, "price per lb", "energy").add_legend()
+sns.plt.title('Energy (kcal) vs. Price')
+
+plt.show()
+```
+
+
+![png](output_42_0.png)
+
+
+There is not really a differennce between fruits and vegetables for calories.
+
+
+```python
+sns.boxplot("health index", "type", data = ndb_df)
+
+sns.plt.title('Distribution of Health, Vegetables vs. Fruit')
+plt.show()
+```
+
+
+![png](output_44_0.png)
+
+
+Fruits have a more limited range of health, but have a higher average health index than vegetables.
+
