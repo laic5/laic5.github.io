@@ -1,0 +1,633 @@
+---
+layout:     post
+title:      "Assignment 5"
+subtitle:   "Introduction to web-scraping in Python"
+date:       2017-02-25 12:00:00
+author:     "Cindy Lai"
+header-img: "img/cat.jpg"
+---
+
+
+# Assignment 5
+
+In this assignment, you'll scrape text from [The California Aggie](https://theaggie.org/) and then analyze the text.
+
+The Aggie is organized by category into article lists. For example, there's a [Campus News](https://theaggie.org/campus/) list, [Arts & Culture](https://theaggie.org/arts/) list, and [Sports](https://theaggie.org/sports/) list. Notice that each list has multiple pages, with a maximum of 15 articles per page.
+
+The goal of exercises 1.1 - 1.3 is to scrape articles from the Aggie for analysis in exercise 1.4.
+
+__Exercise 1.1.__ Write a function that extracts all of the links to articles in an Aggie article list. The function should:
+
+* Have a parameter `url` for the URL of the article list.
+
+* Have a parameter `page` for the number of pages to fetch links from. The default should be `1`.
+
+* Return a list of aricle URLs (each URL should be a string).
+
+Test your function on 2-3 different categories to make sure it works.
+
+Hints:
+
+* Be polite to The Aggie and save time by setting up [requests_cache](https://pypi.python.org/pypi/requests-cache) before you write your function.
+
+* Start by getting your function to work for just 1 page. Once that works, have your function call itself to get additional pages.
+
+* You can use [lxml.html](http://lxml.de/lxmlhtml.html) or [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to scrape HTML. Choose one and use it throughout the entire assignment.
+
+
+```python
+import requests
+import fastcache
+```
+
+
+```python
+import lxml.html as lx
+import pandas as pd
+import numpy as np
+```
+
+
+```python
+urls = ["https://theaggie.org/campus/", "https://theaggie.org/arts/", "https://theaggie.org/sports/"]
+```
+
+
+```python
+def fetch_page(url, currPage = 1, mainPage = False):
+    '''
+    This gets the requests response from the base url and the current page number.
+    '''
+    if mainPage == True:
+        url = url + "page/" + str(currPage) + "/"
+        
+    response = requests.get(url)
+    response.raise_for_status()
+    return response
+```
+
+
+```python
+def html_parser(page, path):
+    '''
+    This takes a response page and searches for the content based on the provided xpath.
+    '''
+    html = lx.fromstring(page.text)
+    li = html.xpath(path)
+
+    return li
+```
+
+
+```python
+def get_article_list(url, numPage = 1):
+    
+    articleList = [] # what you'll be returning: a list of all the article urls within the pages
+    
+    currPage = 1
+    
+    while currPage <= numPage:
+        page = fetch_page(url, currPage, mainPage = True)
+        currPage = currPage + 1
+        
+        li = html_parser(page, path = "//h2[@class = 'entry-title']//a/@href")
+        
+        articleList.append(li)
+        
+    # flatten a list of lists
+    articleList = [url for sublist in articleList for url in sublist]
+    
+    return articleList
+```
+
+
+```python
+art_urls = get_article_list(urls[1], numPage = 2)
+```
+
+
+```python
+art_urls[0:5]
+```
+
+
+
+
+    ['https://theaggie.org/2017/02/23/sacramentos-artstreet-exhibit-showcases-diverse-artwork/',
+     'https://theaggie.org/2017/02/23/armadillo-kdvs-collaborate-to-host-vinyl-and-music-fair/',
+     'https://theaggie.org/2017/02/23/harlows-nightclub-presents-khalid/',
+     'https://theaggie.org/2017/02/21/late-night-eats-in-davis/',
+     'https://theaggie.org/2017/02/21/2017-oscar-nominations-and-predictions/']
+
+
+
+
+```python
+sports_urls = get_article_list(urls[2], numPage = 1)
+```
+
+
+```python
+sports_urls[0:5]
+```
+
+
+
+
+    ['https://theaggie.org/2017/02/24/uc-davis-back-on-track-with-win-over-matadors/',
+     'https://theaggie.org/2017/02/24/aggie-womens-basketball-team-says-neigh-to-mustangs/',
+     'https://theaggie.org/2017/02/23/the-amazeing-aggies/',
+     'https://theaggie.org/2017/02/23/uc-davis-womens-water-polo-dominates-aggie-shootout/',
+     'https://theaggie.org/2017/02/23/womens-gymnastics-take-two/']
+
+
+
+__Exercise 1.2.__ Write a function that extracts the title, text, and author of an Aggie article. The function should:
+
+* Have a parameter `url` for the URL of the article.
+
+* For the author, extract the "Written By" line that appears at the end of most articles. You don't have to extract the author's name from this line.
+
+* Return a dictionary with keys "url", "title", "text", and "author". The values for these should be the article url, title, text, and author, respectively.
+
+
+Hints:
+
+* The author line is always the last line of the last paragraph.
+
+*   Python 2 displays some Unicode characters as `\uXXXX`. For instance, `\u201c` is a left-facing quotation mark.
+    You can convert most of these to ASCII characters with the method call (on a string)
+    ```
+    .translate({ 0x2018:0x27, 0x2019:0x27, 0x201C:0x22, 0x201D:0x22, 0x2026:0x20 })
+    ```
+    If you're curious about these characters, you can look them up on [this page](http://unicode.org/cldr/utility/character.jsp), or read 
+    more about [what Unicode is](http://unicode.org/standard/WhatIsUnicode.html).
+
+
+```python
+def extract_essentials(articleUrl):
+    
+    essential_dict = {}
+    
+    essential_dict["url"] = articleUrl
+    
+    page = fetch_page(articleUrl)
+    
+    titlePath = html_parser(page, "//title")
+    rawTitle = [x.text_content() for x in titlePath]
+    title = rawTitle[0].split("|")[0].strip()
+    essential_dict["title"] = title
+    
+    authorPath = html_parser(page, "//p[contains(., 'Written by:')]")
+    rawAuthor =  [x.text_content() for x in authorPath]
+    
+    if rawAuthor != []:    
+        authorList = rawAuthor[0].split(" ")[2:-2]
+        author = " ".join(authorList)
+        essential_dict["author"] = author
+    
+    else: # could not properly get author
+        essential_dict["author"] = "extracting error"
+    
+    textPath = html_parser(page, "//p")
+    rawText = [x.text_content() for x in textPath]
+    #twoParts = " ".join(rawText).split("\n")
+    #text = twoParts[0]
+    #print twoParts
+    text = " ".join(rawText).split("\n")[0]
+    essential_dict["text"] = text
+
+    return essential_dict
+```
+
+
+```python
+extract_essentials(art_urls[0])
+```
+
+
+
+
+    {'author': u'until this Saturday, Feb. 25 at 300 1st Avenue in Sacramento, CA, and it is free to the public. Check out M5Arts\u2019 website and the ArtStreet Facebook event page to find out more about upcoming events and artists before it\u2019s too late!\nWritten by: Pari Sagafi \u2014',
+     'text': u'Don\u2019t miss this free exhibit ending on Saturday, Feb. 25 Entering the partially-indoor, partially-outdoor world of Sacramento\u2019s ArtStreet exhibit, you are met with the largest wind chime you\u2019ve probably ever seen, and you get to touch beautifully framed moss and have a glimpse at several colorful murals. The diverse art mediums \u2014 sculptures, decorated rooms, an interactive kaleidoscope \u2014 all blend together to resemble an Alice in Wonderland-esque theme park.  There\u2019s no denying that ArtStreet is \u201cweird,\u201d but it\u2019s the good type of weird. Besides, what interesting art isn\u2019t a bit strange at the end of the day? Jose Di Gregorio, a professional artist whose exhibited art works include two murals and a laser cut piece installation, agrees that weird is good. \u201cI\u2019m a self-proclaimed weirdo, and I want to own that term as a positive thing, I want my daughters to be weirdos, and I feel like when you can participate in a weirdo community, and that grows, it starts to become less weird, and less of a fringe subculture,\u201d Di Gregorio said. \u201cThe creative culture is out there, it\u2019s just that they tended to be relegated as a peripheral. And when you put these things in the forefront \u2014 you can\u2019t deny the impact that it has.\u201d Shaun Burner, a professional artist who has been creating murals locally and internationally for the past 15 years, was approached last year by the owner of the Art Hotel to paint a mural on the side of the building before it was set to be demolished. This sparked an idea in Burner, who then suggested that the inside of the hotel could also be utilized to exhibit different types of artwork. The project took off from there.  Now a year later, the team of artists who participated in Art Hotel call itself M5ARTS, described as \u201can arts initiative in Downtown Sacramento who are committed to envisioning and creating culturally significant multifaceted and multidimensional art experiences.\u201d As one of the founders of M5ARTS, Burner knew early on that the artists wanted to continue what they had created with Art Hotel. This year\u2019s ArtStreet project opened on Feb. 3 and features around 100 visual artists and approximately 70 performers and musicians. Quincy Gonzalez and Johanna Peterson, River City High School art students, visited ArtStreet two times, and they hope to come back once more before the exhibit officially ends this Saturday. \u201cI really like that they bring up serious questions and issues that we have in our society,\u201d Peterson said. \u201cI really like the Women\u2019s March Wall, because it makes me feel that we\u2019re gonna fight back and make a difference because we need to make a difference.\u201d On the other hand, Quincy enjoyed how some of the artists \u201cincorporated a lot of Sacramento culture to it, and a lot of the pieces were in collaboration to things happening in Sacramento.\u201d Having access to free, diverse and multidimensional art is not always a possibility \u2014 so check out some of Sacramento\u2019s unique artists and their work while this special opportunity lasts. \u201cThese [art exhibits] become culturally relevant to any city\u2019s fabric,\u201d Di Gregorio said. \u201cThere\u2019s a cultural currency out of this that you don\u2019t get with paying for a product, getting it, and that\u2019s it. These things are intangible, but they\u2019re so important to create so that people have outlets.\u201d ArtStreet runs until this Saturday, Feb. 25 at 300 1st Avenue in Sacramento, CA, and it is free to the public. Check out M5Arts\u2019 website and the ArtStreet Facebook event page to find out more about upcoming events and artists before it\u2019s too late!',
+     'title': u'Sacramento\u2019s  \u201cArtStreet\u201d exhibit showcases diverse artwork',
+     'url': 'https://theaggie.org/2017/02/23/sacramentos-artstreet-exhibit-showcases-diverse-artwork/'}
+
+
+
+<i>Note: The 2nd to last sports url author does not work properly due to the apostrophe. Ask to see how to deal with that.</i>
+
+__Exercise 1.3.__ Use your functions from exercises 1.1 and 1.2 to get a data frame of 60 [Campus News](https://theaggie.org/campus/) articles and a data frame of 60 [City News](https://theaggie.org/city/) articles. Add a column to each that indicates the category, then combine them into one big data frame.
+
+The "text" column of this data frame will be your corpus for natural language processing in exercise 1.4.
+
+
+```python
+city_60_urls = get_article_list("https://theaggie.org/city/", 4)
+```
+
+
+```python
+city_60_urls[0:5]
+```
+
+
+
+
+    ['https://theaggie.org/2017/02/23/davis-whole-foods-market-shuts-down/',
+     'https://theaggie.org/2017/02/23/protest-against-planned-parenthood-in-woodland-is-met-with-counter-protests/',
+     'https://theaggie.org/2017/02/23/daviss-historic-city-hall-building-to-be-put-up-for-sale/',
+     'https://theaggie.org/2017/02/21/davis-stands-with-muslim-residents/',
+     'https://theaggie.org/2017/02/20/city-of-davis-awarded-funds-for-new-recycling-bins/']
+
+
+
+
+```python
+campus_60_urls = get_article_list(urls[0], 4)
+```
+
+
+```python
+campus_dict = [extract_essentials(url) for url in campus_60_urls]
+```
+
+
+```python
+campus_df = pd.DataFrame(campus_dict)
+```
+
+
+```python
+campus_df["category"] = np.repeat("Campus News", len(campus_df))
+```
+
+
+```python
+city_dict = [extract_essentials(url) for url in city_60_urls]
+city_df = pd.DataFrame(city_dict)
+city_df["category"] = np.repeat("City News", len(city_df))
+```
+
+
+```python
+news_df = pd.concat([campus_df, city_df])
+news_df.head()
+```
+
+
+
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>author</th>
+      <th>text</th>
+      <th>title</th>
+      <th>url</th>
+      <th>category</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Alyssa Vandenberg</td>
+      <td>Six senators, new executive team elected Curre...</td>
+      <td>2017 Winter Quarter election results</td>
+      <td>https://theaggie.org/2017/02/24/2017-winter-qu...</td>
+      <td>Campus News</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Aaron Liss and Raul Castellanos</td>
+      <td>Wells Fargo faces fraud, predatory lending cha...</td>
+      <td>University of California, Davis City Council s...</td>
+      <td>https://theaggie.org/2017/02/23/university-of-...</td>
+      <td>Campus News</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Sadeghi’s speech resonated with her in the sen...</td>
+      <td>Faculty, students recount personal tales of im...</td>
+      <td>Academics unite in peaceful rally against immi...</td>
+      <td>https://theaggie.org/2017/02/23/academics-unit...</td>
+      <td>Campus News</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>any remodel project on a building that is over...</td>
+      <td>Opening date pushed back to May 1 Students hav...</td>
+      <td>Memorial Union to reopen Spring Quarter</td>
+      <td>https://theaggie.org/2017/02/23/memorial-union...</td>
+      <td>Campus News</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Ivan Valenzuela</td>
+      <td>Veto included revision abandoning creation of ...</td>
+      <td>ASUCD President Alex Lee vetoes amendment for ...</td>
+      <td>https://theaggie.org/2017/02/23/asucd-presiden...</td>
+      <td>Campus News</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+__Exercise 1.4.__ Use the Aggie corpus to answer the following questions. Use plots to support your analysis.
+
+* What topics does the Aggie cover the most? Do city articles typically cover different topics than campus articles?
+
+* What are the titles of the top 3 pairs of most similar articles? Examine each pair of articles. What words do they have in common?
+
+* Do you think this corpus is representative of the Aggie? Why or why not? What kinds of inference can this corpus support? Explain your reasoning.
+
+Hints:
+
+*   The [nltk book](http://www.nltk.org/book/) and [scikit-learn documentation](http://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction) may be helpful here.
+
+*   You can determine whether city articles are "near" campus articles from the similarity matrix or with k-nearest neighbors.
+
+*   If you want, you can use the [wordcloud](http://amueller.github.io/word_cloud/) package to plot a word cloud. To install the package, run
+    ```
+    conda install -c https://conda.anaconda.org/amueller wordcloud
+    ```
+    in a terminal. Word clouds look nice and are easy to read, but are less precise than bar plots.
+
+#### I will be using the similarity matrix to find which articles are similar.
+
+
+```python
+import nltk
+from nltk import corpus
+from nltk.stem.porter import PorterStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.neighbors import NearestNeighbors
+from matplotlib import pyplot as plt
+plt.style.use('ggplot')
+%matplotlib inline
+```
+
+
+```python
+articleIDs = news_df.index
+
+stemmer = PorterStemmer().stem
+
+tokenize = nltk.word_tokenize
+
+def stem(tokens,stemmer = PorterStemmer().stem):
+    return [stemmer(w.lower()) for w in tokens] 
+
+import string
+
+def lemmatize(text):
+    """
+    Extract simple lemmas based on tokenization and stemming
+    Input: string
+    Output: list of strings (lemmata)
+    """
+    return stem(tokenize(text))
+```
+
+
+```python
+news_df.iloc[articleIDs[0]]["text"]
+```
+
+
+
+
+    u'Six senators, new executive team elected Current ASUCD Vice President Abhay Sandhu announced the ASUCD election results on Feb. 24 in the Memorial Union\u2019s Mee room. Six senators were elected: Sam Chiang, Michael Gofman, Khadeja Ibrahim, Rahi Suryawanshi, Marcos Rodriguez and Yajaira Ramirez Sigala. Chiang and Ibrahim ran on the BASED slate, while Suryawanshi, Rodriguez and Ramirez Sigala ran on the Bespoke slate. Gofman ran independently. The new ASUCD president and vice president will be Josh Dalavai and Adilla Jamaludin. Dalavai and Jamaludin ran on the BASED slate.  The results will also be posted online at elections.ucdavis.edu. Written by: Alyssa Vandenberg \xa0\u2014 campus@theaggie.org You must be logged in to post a comment.'
+
+
+
+
+```python
+textd = {} #dictionary from lemmata to document ids containing that lemma
+for article in articleIDs:
+    t = news_df.iloc[articleIDs[article]]["text"]
+    s = set(lemmatize(t)) - set(string.punctuation) # remove punctuation
+    try:
+        toks = toks | s
+    except NameError:
+        toks = s
+    for tok in s:
+        try:
+            textd[tok].append(article)
+        except KeyError:
+            textd[tok] = [article]
+
+    
+tokids = {} #dictionary of lemma to integer id for the lemma
+tok_list = list(toks)
+m = len(tok_list)
+for j in xrange(m):
+    tokids[tok_list[j]] = j
+```
+
+
+```python
+textd
+```
+
+
+```python
+plt.hist(idf_smooth.values(),bins=10)
+plt.title('IDF values for Words in Campus/City News Articles')
+```
+
+
+
+
+    <matplotlib.text.Text at 0x133202b0>
+
+
+
+
+![png](output_41_1.png)
+
+
+We can see that there are a lot of unique words (almost 1000) in the highest bin. This will be helpful when we find similarities between the articles.
+
+
+```python
+vectorizer = TfidfVectorizer(tokenizer=lemmatize,stop_words="english",smooth_idf=True,norm=None)
+
+tfs = vectorizer.fit_transform(news_df["text"])
+```
+
+
+```python
+sim = tfs.dot(tfs.T)
+sim.mean()
+```
+
+
+
+
+    1955.8938020560031
+
+
+
+
+```python
+np.where(simArray > 14000)
+```
+
+
+
+
+    (array([  1,  10,  12,  14,  14,  14,  16,  16,  16,  16,  28,  29,  31,
+             33,  34,  35,  35,  37,  39,  40,  41,  44,  47,  48,  49,  50,
+             52,  54,  55,  56,  56,  64,  66,  71,  76,  78,  79,  81,  85,
+             86,  87,  88,  90,  91,  95,  96,  97, 110, 112, 114, 115, 115], dtype=int64),
+     array([  1,  10,  12,  14,  16,  35,  14,  16,  56, 115,  28,  29,  31,
+             33,  34,  14,  35,  37,  39,  40,  41,  44,  47,  48,  49,  50,
+             52,  54,  55,  16,  56,  64,  66,  71,  76,  78,  79,  81,  85,
+             86,  87,  88,  90,  91,  95,  96,  97, 110, 112, 114,  16, 115], dtype=int64))
+
+
+
+Look for the corresponding index numbers from the two matrices and find pairs that are not identical (identical means they are similar to themselves, which is not useful to us).
+I got the number 14000 by trial and error, until I got enough unidentical pair numbers.
+
+
+```python
+sim[(14,16)]
+```
+
+
+
+
+    16406.60782035828
+
+
+
+
+```python
+sim[(14,35)]
+```
+
+
+
+
+    16296.809426808632
+
+
+
+
+```python
+sim[(16,56)]
+```
+
+
+
+
+    14122.902745998215
+
+
+
+
+```python
+sim[(16,115)]
+```
+
+
+
+
+    14632.464200002809
+
+
+
+The top 3 most similar article pairs from the similarity matrix are:
+* 14 / 16
+* 14 / 35
+* 16 / 115
+
+
+```python
+print "16", news_df.iloc[16]['title'], "\n", "14", news_df.iloc[14]['title'], "\n", "35", news_df.iloc[35]['title'], "\n", "115", news_df.iloc[115]['title'],
+```
+
+    16 2017 ASUCD Winter Elections — Meet the Candidates 
+    14 UC Davis holds first mental health conference 
+    35 UC Davis to host first ever mental health conference 
+    115 Nov. 8 2016: An Election Day many may never forget
+    
+
+These articles seem somewhat related (14 and 35 is no surprise). I wonder if this is how close the articles will get in terms of similarity, or if it's because all the others are very diverse.
+
+
+```python
+plt.hist(simArray.ravel(),bins=30)
+plt.xlim(right=20000)
+plt.title('Similarity Values Distribution between Articles in The Aggie Corpus')
+```
+
+
+
+
+    <matplotlib.text.Text at 0x14be3198>
+
+
+
+
+![png](output_54_1.png)
+
+
+From this, we can see that very few article pairs exceed 10000. This could indicate that the articles in City News and Campus News are quite unique and don't cover many of the same topics.
+
+From this, I believe this corpus could be a good representation of The Aggie, if you are looking to see the types of articles it usually writes for Campus and City News. However, since these types of articles are very dependent on the time and season, you cannot expect the same articles in the summer, for example.
+
+
+```python
+labels2 = np.repeat(0, 60)
+labels2 = np.append(labels2, np.repeat(1,60))
+```
+
+
+```python
+k_max = 20
+nbrs = NearestNeighbors(n_neighbors=k_max).fit(tfs)
+err_list = []
+
+for k in xrange(1,k_max+1,2):
+    neighmat = nbrs.kneighbors_graph(n_neighbors=k)
+    pred_lab = (neighmat.dot(labels2) > k/2.)*1 
+    err =  np.mean(pred_lab != labels2)
+    err_list.append(err)
+```
+
+
+```python
+plt.plot(range(1,k_max + 1,2),err_list)
+plt.xlabel('k')
+plt.ylabel('Error Rate')
+```
+
+
+
+
+    <matplotlib.text.Text at 0x137a1a90>
+
+
+
+
+![png](output_58_1.png)
+
+
+We can see that k = 1 is the best k value for classification. In the graph, we can see the error rate is somewhat high, especially k >= 3. This can indicate that an article's neighbors are very divided between the two categories, and the line between the two categories is not very distinct.
+
+From this, we can see that Campus News and City News text content are somewhat similar.
+
+#### sites referenced:
+* http://stackoverflow.com/questions/952914/making-a-flat-list-out-of-list-of-lists-in-python
+* http://stackoverflow.com/questions/21455349/xpath-query-get-attribute-href-from-a-tag
+* https://www.w3schools.com/xml/xpath_syntax.asp
+* https://github.com/nick-ulle/nick-ulle.github.io/blob/master/teach/workshop.ipynb
+* http://pandas.pydata.org/pandas-docs/stable/merging.html
+* http://stackoverflow.com/questions/10337533/a-fast-way-to-find-the-largest-n-elements-in-an-numpy-array

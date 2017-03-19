@@ -1,0 +1,10 @@
+---
+layout:     post
+title:      "Assignment 6"
+subtitle:   "Introduction to SQL"
+date:       2017-03-19 01:00:00
+author:     "Cindy Lai"
+header-img: "img/cat.jpg"
+---
+
+# Intro to SQL (more to come)
