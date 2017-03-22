@@ -1,13 +1,13 @@
 ---
 layout:     post
 title:      "Final Project"
-subtitle:   "Doomsday"
+subtitle:   "Music Tastes Analysis"
 date:       2017-03-22 12:00:00
 author:     "Cindy Lai"
 header-img: "img/music.jpg"
 ---
 
-I worked with Colin Santos and Kavi Tan to analyze the top musical trends from 1958 to 2015. 
+I worked with Colin Santos and Kavi Tan to analyze the top musical trends from 1958 to 2015 using the songs from the Billboard charts. 
 
 The process includes web scraping, calls to the Spotify API, natural language processing, and visualization.
 
