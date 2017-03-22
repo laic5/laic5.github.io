@@ -4,7 +4,7 @@ title:      "Assignment 4"
 subtitle:   "Working with APIs"
 date:       2017-02-16 12:00:00
 author:     "Cindy Lai"
-header-img: "img/cat.jpg"
+header-img: "img/forest2.jpg"
 ---
 
 # Assignment 4
@@ -24,14 +24,6 @@ These modules may be useful:
 
 [requests_cache]: https://pypi.python.org/pypi/requests-cache
 
-Sites used: 
-* http://stackoverflow.com/questions/5188792/how-to-check-a-string-for-specific-characters
-* http://www.pythonforbeginners.com/dictionary/python-split
-* http://stackoverflow.com/questions/5438745/python-nan-and-inf-values
-* http://stackoverflow.com/questions/8312829/how-to-remove-item-from-a-python-list-if-a-condition-is-true
-* http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.sort_index.html
-* http://stackoverflow.com/questions/30009948/how-to-reorder-indexed-rows-based-on-a-list-in-pandas-data-frame
-* http://stackoverflow.com/questions/5147112/matplotlib-how-to-put-individual-tags-for-a-scatter-plot
 
 __Exercise 1.1.__ Read the [search request documentation](https://ndb.nal.usda.gov/ndb/doc/apilist/API-SEARCH.md), then write a function called `ndb_search()` that makes a search request. The function should accept the search term as an argument. The function should return the search result items as a list (for 0 items, return an empty list).
 
@@ -813,3 +805,11 @@ plt.show()
 
 Fruits have a more limited range of health, but have a higher average health index than vegetables.
 
+Sites used: 
+* http://stackoverflow.com/questions/5188792/how-to-check-a-string-for-specific-characters
+* http://www.pythonforbeginners.com/dictionary/python-split
+* http://stackoverflow.com/questions/5438745/python-nan-and-inf-values
+* http://stackoverflow.com/questions/8312829/how-to-remove-item-from-a-python-list-if-a-condition-is-true
+* http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.sort_index.html
+* http://stackoverflow.com/questions/30009948/how-to-reorder-indexed-rows-based-on-a-list-in-pandas-data-frame
+* http://stackoverflow.com/questions/5147112/matplotlib-how-to-put-individual-tags-for-a-scatter-plot

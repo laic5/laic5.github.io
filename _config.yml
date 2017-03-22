@@ -1,12 +1,12 @@
 # Site settings
-title: Cindy Lai STAT 141b
+title: Cindy Lai's Data Treasure Trove
 header-img: img/home-bg.jpg
-email: cynlai@ucdavis.edu
-description: Cindy Lai's STAT 141B portfolio site 
+email: CynthiaLai1996@gmail.com
+description: Cindy Lai's STA 141B portfolio site 
 baseurl: ""
 url: "https://laic5.github.io"
 github_username:  laic5
-email_username: cynlai@ucdavis.edu
+email_username: CynthiaLai1996@gmail.com
 
 # Google Analytics
 # To enable google analytics, uncomment below line with a valid Google Tracking ID

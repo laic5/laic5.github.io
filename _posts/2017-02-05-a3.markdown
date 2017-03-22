@@ -4,7 +4,7 @@ title:      "Assignment 3"
 subtitle:   "Introduction to Pandas and Dataframes"
 date:       2017-02-05 12:00:00
 author:     "Cindy Lai"
-header-img: "img/cat.jpg"
+header-img: "img/forest2.jpg"
 ---
 
 

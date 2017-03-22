@@ -1,17 +1,13 @@
 ---
 layout:     post
 title:      "Assignment 1"
-subtitle:   "Calculating leap year with Python"
+subtitle:   "Doomsday"
 date:       2017-01-22 12:00:00
 author:     "Cindy Lai"
-header-img: "img/cat.jpg"
+header-img: "img/forest.jpg"
 ---
 
-# Calculating the Leap Year with Python
-
-Cynthia Lai <br>
-1/22/2017<br>
-I asked Edie Espejo for help.
+# Assignment 1
 
 
 ## Part 1: The Doomsday Algorithm
@@ -236,8 +232,3 @@ for entry in data:
         li.append(int(element))
     bdays.append(li)
 ```
-
-__Exercise 2.2.__ Which month had the most births in 1978? Which day of the week had the most births? Which day of the week had the fewest? What conclusions can you draw? You may find the `Counter` class in the `collections` module useful.
-
-__Exercise 2.3.__ What would be an effective way to present the information in exercise 2.2? You don't need to write any code for this exercise, just discuss what you would do.
-
