@@ -7,8 +7,10 @@ author:     "Cindy Lai"
 header-img: "img/music.jpg"
 ---
 
+## Can you extract cultural trends from the top music hits?
+
 I worked with Colin Santos and Kavi Tan to analyze the top musical trends from 1958 to 2015 using the songs from the Billboard charts. 
 
 The process includes web scraping, calls to the Spotify API, natural language processing, and visualization.
 
-You can view our analysis [on this site](jiahtan.github.io/STA141B/).
+You can view our analysis [on this site](https://jiahtan.github.io/STA141B/).
